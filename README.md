@@ -5,7 +5,7 @@ Server that store several types of logging from NEAR Nodes and allow inspecting 
 ## Start
 
 1. Install docker
-2. Install flask using `python3 -m pip install --user flask`
+2. Install dependencies using `python3 -m pip install -r requirements.txt`
 3. Run server using `./cli.py`
 
 ## Stop
