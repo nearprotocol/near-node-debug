@@ -1,0 +1,14 @@
+# TODO:
+
+- Types of widget
+    - Network: Current connection/active inactive
+    - Number of message / Size
+    - Show messages sorted by time
+
+- Filters:
+    - me (who is me)
+    - from ()
+    - type of message
+    - date
+
+Try to detect anomalies (repeated messages)

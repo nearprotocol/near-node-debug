@@ -1,0 +1,17 @@
+<h4> Me: {{ me }} </h4>
+
+<br/>
+
+<ol>
+{% for node in nodes %}
+<li> {{ node }} </li>
+{% endfor %}
+</ol>
+
+<br/>
+
+<ol>
+{% for edge in edges %}
+<li> {{ edge }} </li>
+{% endfor %}
+</ol>
