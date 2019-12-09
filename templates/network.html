@@ -1,17 +1,32 @@
-<h4> Me: {{ me }} </h4>
+<!-- START SIGMA IMPORTS -->
+<script src="/static/js/sigma.js"></script>
+<script src="/static/js/sigma.parsers.json.min.js"></script>
+<!-- END SIGMA IMPORTS -->
 
-<br/>
+<div id="container">
+  <style>
+    #graph-container {
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      position: absolute;
+    }
+  </style>
+  <div id="graph-container"></div>
+</div>
+<script>
 
-<ol>
-{% for node in nodes %}
-<li> {{ node }} </li>
-{% endfor %}
-</ol>
+    s = new sigma(
+        {
+            container: 'graph-container',
+            type: 'canvas',
+            settings: {}
+        }
+    );
 
-<br/>
+    sigma.parsers.json('/api/network', s, function(){
+        s.refresh();
+    });
 
-<ol>
-{% for edge in edges %}
-<li> {{ edge }} </li>
-{% endfor %}
-</ol>
+</script>

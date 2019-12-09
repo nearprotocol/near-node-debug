@@ -41,7 +41,17 @@ def run(web_port, database_path, database_port, skip_database, skip_pull, debug)
                 database_path = abspath(expanduser(database_path))
                 if not exists(database_path):
                     makedirs(database_path)
-                subprocess.check_output(['docker', 'run', '-d', '-p', f'{database_port}:27017', '-v', f'{database_path}:/data/db', '--name', 'neardebug', 'mongo'])
+                try:
+                    subprocess.check_output(['docker', 'run', '-d', '-p', f'{database_port}:27017', '-v', f'{database_path}:/data/db', '--name', 'neardebug', 'mongo'])
+                except:
+                    print("\nUnable to launch database\n"\
+                          "\nStop hanging container using\n"\
+                          "./cli.py --stop\n"\
+                          "\nIf database is already running use:\n"
+                          "./cli.py --skip_database\n"
+                        )
+                    exit(0)
+
             print("Finished")
         except subprocess.CalledProcessError as exc:
             print("Failed to start docker container: %s" % exc)

@@ -1,12 +1,4 @@
-template = """
-Me: {me}
-
-Nodes:
-{nodes}
-
-Edges:
-{edges}
-"""
+import networkx as nx
 
 def get_network(collection):
     cursor = collection.find({"message.Sync" : {"$exists" : True}})
@@ -36,7 +28,48 @@ def get_network(collection):
     return {
         "me" : me,
         "nodes" : nodes,
-        "edges" : [
-            f"{peer0}, {peer1} = {value}" for ((peer0, peer1), value) in glob_edges.items()
-        ]
+        "edges" : glob_edges,
+    }
+
+
+def get_network_graph(collection):
+    context = get_network(collection)
+
+    me = context['me']
+
+    nodes = [{
+        'id' : node,
+        'label' : node,
+        'size' : 1,
+        'x' : 0,
+        'y' : 0,
+        'color' : '#000' if node != me else '#FF0'
+    } for node in context['nodes']]
+
+    edges = [{
+        "id" : peer0 + peer1,
+        "label" : value,
+        "source" : peer0,
+        "target" : peer1,
+        "color" : "#0F0" if value % 2 == 1 else "#F00"
+    } for ((peer0, peer1), value) in context['edges'].items()]
+
+    graph = nx.Graph()
+
+    for node in nodes:
+        graph.add_node(node['id'])
+
+    for edge in edges:
+        graph.add_edge(edge['source'], edge['target'])
+
+    layout = nx.kamada_kawai_layout(graph)
+
+    for node in nodes:
+        x, y = layout[node['id']]
+        node['x'] = x
+        node['y'] = y
+
+    return {
+        "nodes" : nodes,
+        "edges" : edges,
     }

@@ -5,7 +5,7 @@ from json import dumps
 from copy import deepcopy
 
 from widgets.debug import all_message_types
-from widgets.network import get_network
+from widgets.network import get_network, get_network_graph
 
 
 app = Flask(__name__)
@@ -59,6 +59,7 @@ def hello():
         print(dumps(tmp_data))
     return ''
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -86,10 +87,14 @@ def debug():
     return str(all_message_types(collection))
 
 
+@app.route('/api/network')
+def api_network():
+    return jsonify(get_network_graph(collection))
+
+
 @app.route('/network')
 def network():
-    context = get_network(collection)
-    return render_template('network.html', **context)
+    return render_template('network.html')
 
 
 def start_server(port, debug, database_name, database_addr):
