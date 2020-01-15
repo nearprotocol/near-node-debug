@@ -4,6 +4,8 @@ import subprocess
 from os.path import abspath, expanduser, exists
 from os import makedirs
 import argparse
+import server
+import collector
 
 
 """Stops and removes given docker container."""
@@ -18,10 +20,12 @@ def docker_stop_if_exists(name):
         pass
 
 
-def run(web_port, database_path, database_port, skip_database, skip_pull, debug):
-    if skip_database:
-        skip_pull = True
-
+def start_db(path, port, skip_pull):
+    """
+    path: Path to connect mongo db to, and store all data.
+    port: Port where mongo db service will be listening at.
+    skip_pull: Flag to avoid pulling docker image.
+    """
     if not skip_pull:
         try:
             print("Downloading mongo image...")
@@ -31,34 +35,38 @@ def run(web_port, database_path, database_port, skip_database, skip_pull, debug)
             print("Failed to fetch docker containers: %s" % exc)
             exit(1)
 
-    if not skip_database:
-        try:
-            print("Spinning up database")
-            if 'neardebug' in subprocess.check_output(['docker', 'ps', '--filter', 'name=neardebug']).decode():
-                print("Database already up")
-            else:
-                database_path = abspath(expanduser(database_path))
-                if not exists(database_path):
-                    makedirs(database_path)
-                try:
-                    subprocess.check_output(['docker', 'run', '-d', '-p', f'{database_port}:27017', '-v', f'{database_path}:/data/db', '--name', 'neardebug', 'mongo'])
-                except:
-                    print("\nUnable to launch database\n"\
-                          "\nStop hanging container using\n"\
-                          "./cli.py --stop\n"\
-                          "\nIf database is already running use:\n"
-                          "./cli.py --skip_database\n"
-                        )
-                    exit(0)
+    try:
+        print("Spinning up database...")
+        if 'neardebug' in subprocess.check_output(['docker', 'ps', '--filter', 'name=neardebug']).decode():
+            print("Database already up")
+        else:
+            path = abspath(expanduser(path))
+            if not exists(path):
+                makedirs(path)
+            try:
+                subprocess.check_output(['docker', 'run', '-d', '-p', f'{port}:27017', '-v', f'{path}:/data/db', '--name', 'neardebug', 'mongo'])
+            except:
+                print("\nUnable to launch database\n"\
+                        "\nStop hanging container using\n"\
+                        "./cli.py --stop\n"\
+                    )
+                exit(0)
 
-            print("Finished")
-        except subprocess.CalledProcessError as exc:
-            print("Failed to start docker container: %s" % exc)
-            exit(1)
+        print("Finished")
+    except subprocess.CalledProcessError as exc:
+        print("Failed to start docker container: %s" % exc)
+        exit(1)
 
-    print("NEAR debug app started.")
-    print(f"Connect via http://0.0.0.0:{database_port}")
-    start_server(web_port, debug, 'near_debug', f'localhost:{database_port}')
+    print("NEAR Diagnostic Tool started.")
+    print(f"Connect via http://0.0.0.0:{port}")
+
+
+def watch(logs, port):
+    db = server.DBAccess(f'127.0.0.1:{port}', 'diagnostic')
+
+    for log in logs.split(','):
+        handler = db.handler(log)
+        collector.Collector(open(log), handler).start()
 
 
 def stop():
@@ -68,16 +76,16 @@ def stop():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Near node debug app')
 
-    parser.add_argument('--database_path', default='~/.near-debug-data', help="Database with logs will be stored at this place.")
-    parser.add_argument('--database_port', type=int, default=27017, help="Database will be listening at this port.")
-    parser.add_argument('--skip_database', action='store_true', help="Don't spin up database. Use only if database is already up.")
-    parser.add_argument('--skip_pull', action='store_true', help="Don't try to pull docker image. Use only if image is already downloaded.")
-    parser.add_argument('--debug', action='store_true', help="Flask debug active")
+    parser.add_argument('--path', default='~/.near-diagnostics', help="Database with logs will be stored at this place.")
+    parser.add_argument('--port', type=int, default=27017, help="Database will be listening at this port.")
     parser.add_argument('--stop', action='store_true', help="Stop database")
+    parser.add_argument('--skip_pull', action='store_true', help="Don't try to pull docker image. Use only if image is already downloaded.")
+    parser.add_argument('--watch', default='', help='Output files to observe')
 
     args = parser.parse_args()
 
     if args.stop:
         stop()
     else:
-        run(args.web_port, args.database_path, args.database_port, args.skip_database, args.skip_pull, args.debug)
+        start_db(args.path, args.port,args.skip_pull)
+        watch(args.watch, args.port)

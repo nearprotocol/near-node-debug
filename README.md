@@ -1,13 +1,35 @@
-# Debug NEAR nodes
+# NEAR | Diagnostic Tool
 
-Server that store several types of logging from NEAR Nodes and allow inspecting this data in a smart way.
+Save and process programmatically diagnostics exposed by NEAR nodes.
 
-## Start
+## Steps
 
-1. Install docker
-2. Install dependencies using `python3 -m pip install -r requirements.txt`
-3. Run server using `./cli.py`
+### Run your node in diagnostic mode
 
-## Stop
+Add `diagnostic=trace` to `RUST_LOG`.
 
-1. `./cli.py --stop`
+```bash
+export RUST_LOG=diagnostic=trace
+```
+
+Run near binary and dump logs to a file.
+
+```bash
+cd path/to/nearcore
+mkdir ~/.near
+cargo run -p near -- run | tee ~/near/node.log
+```
+
+### Start log watcher
+
+Install docker
+
+```bash
+python3 -m pip install -r requirements.txt
+./cli.py --watch ~/near/node.log
+```
+
+When run for first time it will pull mongo docker image.
+
+Use `./cli.py --help` to see further options.
+
