@@ -16,7 +16,6 @@ class Handler:
             to_insert.append(doc)
 
         if to_insert:
-            print(self.name, len(to_insert))
             self.collection.insert_many(to_insert)
 
 

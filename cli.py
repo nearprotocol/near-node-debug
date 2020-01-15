@@ -3,7 +3,6 @@
 import subprocess
 from os.path import abspath, expanduser, exists
 from os import makedirs
-from app import start_server
 import argparse
 
 
@@ -69,7 +68,6 @@ def stop():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Near node debug app')
 
-    parser.add_argument('--web_port', type=int, default=8181, help="App will be listening at this port. Point debug telemetry to it. Default 8181.")
     parser.add_argument('--database_path', default='~/.near-debug-data', help="Database with logs will be stored at this place.")
     parser.add_argument('--database_port', type=int, default=27017, help="Database will be listening at this port.")
     parser.add_argument('--skip_database', action='store_true', help="Don't spin up database. Use only if database is already up.")
