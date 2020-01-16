@@ -5,7 +5,6 @@ from os.path import abspath, expanduser, exists
 from os import makedirs
 import argparse
 import server
-import collector
 
 
 """Stops and removes given docker container."""
@@ -45,6 +44,7 @@ def start_db(path, port, skip_pull):
                 makedirs(path)
             try:
                 subprocess.check_output(['docker', 'run', '-d', '-p', f'{port}:27017', '-v', f'{path}:/data/db', '--name', 'neardebug', 'mongo'])
+                print("Finished")
             except:
                 print("\nUnable to launch database\n"\
                         "\nStop hanging container using\n"\
@@ -52,7 +52,6 @@ def start_db(path, port, skip_pull):
                     )
                 exit(0)
 
-        print("Finished")
     except subprocess.CalledProcessError as exc:
         print("Failed to start docker container: %s" % exc)
         exit(1)
@@ -63,10 +62,9 @@ def start_db(path, port, skip_pull):
 
 def watch(logs, port):
     db = server.DBAccess(f'127.0.0.1:{port}', 'diagnostic')
-
     for log in logs.split(','):
         handler = db.handler(log)
-        collector.Collector(open(log), handler).start()
+        server.Collector(open(log), handler).start()
 
 
 def stop():

@@ -33,3 +33,10 @@ When run for first time it will pull mongo docker image.
 
 Use `./cli.py --help` to see further options.
 
+### Watch multiple logs
+
+Pass comma separated path as watch argument to watch several logs at the same time.
+
+```bash
+./cli.py --watch ~/near/node0.log,~/near/node0.log
+```

@@ -3,7 +3,15 @@ import string
 import json
 
 color_pattern = re.compile("\\033\[\d+m")
-separator = re.compile('="')
+separator = re.compile('=')
+
+# Reference for string to avoid copying it
+class Log:
+    def __init__(self, log):
+        self.log = log
+
+    def __getitem__(self, key):
+        return self.log[key]
 
 
 def no_color(log):
@@ -12,35 +20,58 @@ def no_color(log):
 
 
 def is_diagnostic(log):
-    return 'TRACE diagnostic:' in log
+    return 'TRACE diagnostic' in log
+
+
+def parse_obj(log, pos):
+    key_s = pos
+    while log[key_s - 1].isalnum():
+        key_s -= 1
+    key = log[key_s: pos]
+
+    if log[pos + 1] == '"': # parse a string
+        value_s = pos + 1
+        value_e = pos + 2
+        while log[value_e] != '"' or log[value_e - 1] == '\\':
+            value_e += 1
+        value = log[value_s: value_e + 1]
+
+    elif log[pos + 1].isdigit(): # parse a number
+        value_e = pos + 1
+        while log[value_e].isdigit():
+            value_e += 1
+        value = int(log[pos + 1: value_e])
+        value_e -= 1
+
+    return ((key, value), value_e)
 
 
 def parse(log):
-    result = {}
+    log = Log(log)
 
-    for match in re.finditer(separator, log):
+    result = {}
+    last = 0
+
+    for match in re.finditer(separator, log.log):
         s = match.start()
-        key_s = s
-        while log[key_s - 1].isalnum():
-            key_s -= 1
-        key = log[key_s:s]
-        value_s = s + 1
-        value_e = s + 2
-        while log[value_e] != '"' or log[value_e - 1] == '\\':
-            value_e += 1
-        value = log[value_s:value_e + 1]
-        value = json.loads(value)
+        if s <= last:
+            continue
+
+        ((key, value), last) = parse_obj(log, s)
+
+        if isinstance(value, str):
+            value = json.loads(value)
 
         try:
-            # Try to parse inner string as json
-            value = json.loads(value)
-            value = fix_large_integer(value)
+            if isinstance(value, str):
+                # Try to parse inner string as json
+                value = json.loads(value)
         except json.decoder.JSONDecodeError:
             pass
 
         result[key] = value
 
-    return result
+    return fix_large_integer(result)
 
 
 def parse_all(lines):
