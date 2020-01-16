@@ -1,9 +1,11 @@
 import re
 import string
 import json
+import datetime
 
 color_pattern = re.compile("\\033\[\d+m")
 separator = re.compile('=')
+year = datetime.datetime.now().year
 
 # Reference for string to avoid copying it
 class Log:
@@ -46,6 +48,17 @@ def parse_obj(log, pos):
     return ((key, value), value_e)
 
 
+def parse_date(log):
+    pos, blank = 0, 0
+    while blank < 3:
+        blank += int(log[pos] == ' ')
+        pos += 1
+    date = log[:pos - 1]
+    res = datetime.datetime.strptime(date, "%b %d %H:%M:%S.%f")
+    res = res.replace(year=year)
+    return res
+
+
 def parse(log):
     log = Log(log)
 
@@ -71,6 +84,8 @@ def parse(log):
 
         result[key] = value
 
+
+    result['date'] = parse_date(log)
     return fix_large_integer(result)
 
 
@@ -81,6 +96,9 @@ def parse_all(lines):
 # MongoDB don't accept numbers greater signed 64 bits integer (2**63 - 1).
 # Convert such numbers into strings.
 def fix_large_integer(value):
+    if isinstance(value, datetime.datetime):
+        return value
+
     if isinstance(value, int):
         if value >= 2**63:
             value = str(value)
@@ -111,5 +129,7 @@ def fix_large_integer(value):
 
     if value is None:
         return value
+
+
 
     assert False, f"{str(value)} | {type(value)}"
