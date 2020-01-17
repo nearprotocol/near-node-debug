@@ -11,12 +11,19 @@ class Handler:
         self.name = name
         self.collection = collection
 
+    def update(self, doc):
+        doc['_origin'] = self.name
+
+        if doc.get('key', '') in ('tx', 'rx'):
+            if isinstance(doc['msg'], str):
+                doc['msg'] = { doc['msg'] : {} }
+
     def feed(self, lines):
         print(self.name, len(lines))
         to_insert = []
 
         for doc in utils.parse_all(lines):
-            doc['_origin'] = self.name
+            self.update(doc)
             to_insert.append(doc)
 
         if to_insert:

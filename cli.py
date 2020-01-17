@@ -57,10 +57,13 @@ def start_db(path, port, skip_pull):
         exit(1)
 
     print("NEAR Diagnostic Tool started.")
-    print(f"Connect via http://0.0.0.0:{port}")
+    print(f"Connect to: http://0.0.0.0:{port}")
 
 
 def watch(logs, port):
+    if not logs:
+        return
+
     db = server.DBAccess(f'127.0.0.1:{port}', 'diagnostic')
     for log in logs.split(','):
         handler = db.handler(log)
