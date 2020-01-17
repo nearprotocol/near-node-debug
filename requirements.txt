@@ -1,1 +1,4 @@
-pymongo
+dash
+networkx
+matplotlib
+plotly
