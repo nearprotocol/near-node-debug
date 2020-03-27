@@ -19,7 +19,7 @@ except:
     print("python3 app.py http://127.0.0.1:3030")
     exit(1)
 
-app = dash.Dash(__name__)
+app = dash.Dash(__name__, routes_pathname_prefix="/near/")
 app.layout = html.Div(
     html.Div([
         html.H1('Near Network | Dashboard'),
@@ -147,6 +147,8 @@ def update_received_type(n):
     size, total, labels = api.get_received_type()
     fig.add_trace(go.Pie(labels=labels, values=size), 1, 1)
     fig.add_trace(go.Pie(labels=labels, values=total), 1, 2)
+    fig.update_traces(textposition='inside')
+    fig.update_layout(uniformtext_minsize=12, uniformtext_mode='hide')
     return fig
 
 
@@ -155,8 +157,11 @@ def update_received_peer(n):
     fig = plotly.subplots.make_subplots(
         rows=1, cols=2, subplot_titles=["Bytes", "Total"], specs=[[{'type': 'domain'}, {'type': 'domain'}]])
     size, total, labels = api.get_received_peer()
+
     fig.add_trace(go.Pie(labels=labels, values=size), 1, 1)
     fig.add_trace(go.Pie(labels=labels, values=total), 1, 2)
+    fig.update_traces(textposition='inside')
+    fig.update_layout(uniformtext_minsize=12, uniformtext_mode='hide')
     return fig
 
 
@@ -170,4 +175,4 @@ def update_received_peer(n):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=False)
