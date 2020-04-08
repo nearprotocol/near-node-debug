@@ -7,48 +7,90 @@ import networkx as nx
 import numpy as np
 import requests
 
+NETWORK_INFO = 'network_info'
+STATUS = 'status'
+SLEEP_TIME = 5
+
 
 class Fetcher(Thread):
-    def __init__(self, bootstrap, callback):
+    def __init__(self, bootstrap, data_callback):
         self._all_nodes = [bootstrap]
-        self._callback = callback
+        self._callback = data_callback
         super().__init__()
+
+    def populate(self, active_peers):
+        new_node = False
+        for peer in active_peers:
+            ip, port = peer['addr'].split(':')
+            if ip == '127.0.0.1':
+                port = 3030 + int(port) - 24567
+            else:
+                port = 3030
+            addr = f"http://{ip}:{port}"
+
+            if addr not in self._all_nodes:
+                self._all_nodes.append(addr)
+                new_node = True
+        return new_node
 
     def run(self):
         while True:
             new_node = False
 
             for node in list(self._all_nodes):
-                res = requests.get(node + "/network_info").json()
+                # Fetch all data
+                res_network_info = requests.get(
+                    node + "/" + NETWORK_INFO).json()
+                me = res_network_info['metric_recorder']['me']
+                res_status = requests.get(node + "/" + STATUS).json()
 
-                self._callback(node, res)
+                # Build dictionary with all data and execute callback
+                info = {
+                    NETWORK_INFO: res_network_info,
+                    STATUS: res_status
+                }
+                self._callback(me, info)
 
                 # Populate all nodes
-                for peer in res['active_peers']:
-                    ip, port = peer['addr'].split(':')
-                    if ip == '127.0.0.1':
-                        port = 3030 + int(port) - 24567
-                    else:
-                        port = 3030
-                    addr = f"http://{ip}:{port}"
-
-                    if addr not in self._all_nodes:
-                        self._all_nodes.append(addr)
-                        new_node = True
+                new_node |= self.populate(
+                    active_peers=res_network_info['active_peers'])
 
             if not new_node:
-                time.sleep(5)
+                time.sleep(SLEEP_TIME)
 
 
 class Api:
-    def __init__(self, bootstrap):
+    def __init__(self, bootstrap, handle_callback):
+        self._handle_callback = handle_callback
         self.fetcher = Fetcher(bootstrap, self.handle)
         self.fetcher.start()
         self.nodes = {}
 
-    def handle(self, node_url, info):
-        me = info['metric_recorder']['me']
+    def heights(self):
+        answer = []
+        for _, node in self.nodes.items():
+            answer.append(node[STATUS]['sync_info']['latest_block_height'])
+        return answer
+
+    def stats_per_type_of_message(self):
+        data = {}
+        for _, node in self.nodes.items():
+            for key, value in node[NETWORK_INFO]['metric_recorder']['per_type'].items():
+                if not key in data:
+                    # Sent count sum / Sent count max / Sent bytes sum / Sent bytes max
+                    data[key] = [0, 0, 0, 0]
+                count = value['sent']['count']
+                size = value['sent']['bytes']
+
+                data[key][0] += count
+                data[key][1] = max(data[key][1], count)
+                data[key][2] += size
+                data[key][3] = max(data[key][3], size)
+        return data
+
+    def handle(self, me, info):
         self.nodes[me] = info
+        self._handle_callback(self, me)
 
     def num_nodes(self):
         return len(self.nodes)
@@ -90,7 +132,7 @@ class Api:
 
         for u, data in self.nodes.items():
             u = node_ix.get(u)
-            for (v, l) in data['metric_recorder']['latencies'].items():
+            for (v, l) in data[NETWORK_INFO]['metric_recorder']['latencies'].items():
                 v = node_ix.get(v, -1)
                 if v == -1:
                     continue
@@ -111,7 +153,7 @@ class Api:
 
         for u, data in self.nodes.items():
             u = node_ix.get(u)
-            for (v, l) in data['metric_recorder']['per_peer'].items():
+            for (v, l) in data[NETWORK_INFO]['metric_recorder']['per_peer'].items():
                 v = node_ix.get(v, -1)
                 if v == -1:
                     continue
@@ -132,7 +174,7 @@ class Api:
 
         for u, data in self.nodes.items():
             u = node_ix.get(u)
-            for (v, l) in data['metric_recorder']['per_peer'].items():
+            for (v, l) in data[NETWORK_INFO]['metric_recorder']['per_peer'].items():
                 v = node_ix.get(v, -1)
                 if v == -1:
                     continue
@@ -148,16 +190,16 @@ class Api:
         size, total, labels = [], [], []
         for (label, data) in next(iter(self.nodes.items()))[1]['metric_recorder']['per_type'].items():
             labels.append(label)
-            size.append(data['received']['bytes'])
-            total.append(data['received']['count'])
+            size.append(data[NETWORK_INFO]['received']['bytes'])
+            total.append(data[NETWORK_INFO]['received']['count'])
         return size, total, labels
 
     def get_received_peer(self):
         size, total, labels = [], [], []
         for (label, data) in next(iter(self.nodes.items()))[1]['metric_recorder']['per_peer'].items():
             labels.append(label)
-            size.append(data['received']['bytes'])
-            total.append(data['received']['count'])
+            size.append(data[NETWORK_INFO]['received']['bytes'])
+            total.append(data[NETWORK_INFO]['received']['count'])
         return size, total, labels
 
     def summary(self):
