@@ -88,6 +88,12 @@ class Api:
                 data[key][3] = max(data[key][3], size)
         return data
 
+    def validators(self):
+        if len(self.nodes) == 0:
+            return 0
+        _, node = next(iter(self.nodes.items()))
+        return len(node[STATUS]['validators'])
+
     def handle(self, me, info):
         self.nodes[me] = info
         self._handle_callback(self, me)

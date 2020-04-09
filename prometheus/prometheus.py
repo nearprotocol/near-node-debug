@@ -41,6 +41,8 @@ handle_calls = Counter("handle_message_calls",
 
 highest_block = GaugeWithDelta("highest_block", "Latest block", 60)
 
+validators = Gauge("validators", "Validators")
+
 all_messages = {}
 
 
@@ -52,6 +54,7 @@ def handle_message(api, node):
 
     stats = api.stats_per_type_of_message()
 
+    validators.set(api.validators())
     for key, stat in stats.items():
         if not key in all_messages:
             all_messages[key] = [GaugeWithDelta(
